@@ -95,5 +95,5 @@ jobs:
           aws apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --authorization-type NONE --request-parameters method.request.path.proxy=true
           aws apigateway put-integration --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --type AWS_PROXY --integration-http-method POST --uri arn:aws:apigateway:$AWS_REGION:lambda:path/2015-03-31/functions/arn:aws:lambda:$AWS_REGION:$AWS_ACCOUNT_ID:function:$AWS_FUNCTION_NAME/invocations
 
-          aws apigateway create-deployment --rest-api-id $API_ID --stage-name dev
+          aws apigateway create-deployment --rest-api-id $API_ID --stage-name api
           aws lambda add-permission --function-name $AWS_FUNCTION_NAME --statement-id apigateway-proxy --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:$AWS_REGION:$AWS_ACCOUNT_ID:$API_ID/*/*/{proxy+}"
