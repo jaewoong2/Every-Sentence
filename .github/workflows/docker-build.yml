@@ -10,7 +10,8 @@ env:
   ECR_REPOSITORY: every-sentence # set this to your Amazon ECR repository name
   AWS_FUNCTION_NAME: every-sentence-lambda
   AWS_API_GATEWAY_NAME: every-sentence-gw
-  AWS_LAMBDA_ROLE: lambda_full
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_LAMBDA_ROLE: ${{ secrets.AWS_LAMBDA_ROLE }}
 
 jobs:
   deploy:
@@ -67,8 +68,8 @@ jobs:
 
       - name: Deploy to Lambda
         env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_LAMBDA_ROLE: ${{ secrets.AWS_LAMBDA_ROLE }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           FUNCTION_EXISTS=$(aws lambda get-function --function-name $AWS_FUNCTION_NAME || echo "not exists")
           if [[ $FUNCTION_EXISTS == "not exists" ]]; then
