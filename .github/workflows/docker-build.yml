@@ -66,13 +66,16 @@ jobs:
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       - name: Deploy to Lambda
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_LAMBDA_ROLE: ${{ secrets.AWS_LAMBDA_ROLE }}
         run: |
           FUNCTION_EXISTS=$(aws lambda get-function --function-name $AWS_FUNCTION_NAME || echo "not exists")
           if [[ $FUNCTION_EXISTS == "not exists" ]]; then
             aws lambda create-function --function-name $AWS_FUNCTION_NAME \
               --package-type Image \
               --code ImageUri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-              --role arn:aws:iam::account-id:role/$AWS_LAMBDA_ROLE
+              --role arn:aws:iam::$AWS_ACCOUNT_ID:role/$AWS_LAMBDA_ROLE
           else
             aws lambda update-function-code --function-name $AWS_FUNCTION_NAME \
               --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -80,12 +83,16 @@ jobs:
 
       - name: Setup API Gateway
         run: |
-          API_ID=$(aws apigateway get-rest-apis --query "items[?name=='$AWS_API_GATEWAY_NAME'].id" --output text)
+          API_ID=$(aws apigateway get-rest-apis --query "items[?name==$AWS_API_GATEWAY_NAME].id" --output text)
           if [ -z "$API_ID" ]; then
             API_ID=$(aws apigateway create-rest-api --name $AWS_API_GATEWAY_NAME --description "API for Lambda" --query 'id' --output text)
-            PARENT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query 'items[?path==`/`].id' --output text)
-            RESOURCE_ID=$(aws apigateway create-resource --rest-api-id $API_ID --parent-id $PARENT_RESOURCE_ID --path-part YourResourcePath --query 'id' --output text)
-            aws apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --authorization-type NONE
-            aws apigateway put-integration --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --type AWS_PROXY --integration-http-method POST --uri arn:aws:apigateway:region:lambda:path/2015-03-31/functions/arn:aws:lambda:region:account-id:function:$AWS_FUNCTION_NAME/invocations
-            aws apigateway create-deployment --rest-api-id $API_ID --stage-name dev
-            aws lambda add-permission --function-name $AWS_FUNCTION_NAME --statement-id apigateway-test-2 --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:region:account-id:$
+          fi
+
+          PARENT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query 'items[?path==`/`].id' --output text)
+          RESOURCE_ID=$(aws apigateway create-resource --rest-api-id $API_ID --parent-id $PARENT_RESOURCE_ID --path-part "{proxy+}" --query 'id' --output text)
+
+          aws apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --authorization-type NONE --request-parameters method.request.path.proxy=true
+          aws apigateway put-integration --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --type AWS_PROXY --integration-http-method POST --uri arn:aws:apigateway:$AWS_REGION:lambda:path/2015-03-31/functions/arn:aws:lambda:$AWS_REGION:$AWS_ACCOUNT_ID:function:$AWS_FUNCTION_NAME/invocations
+
+          aws apigateway create-deployment --rest-api-id $API_ID --stage-name dev
+          aws lambda add-permission --function-name $AWS_FUNCTION_NAME --statement-id apigateway-proxy --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:$AWS_REGION:$AWS_ACCOUNT_ID:$API_ID/*/*/{proxy+}"
