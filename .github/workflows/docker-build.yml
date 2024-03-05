@@ -22,6 +22,12 @@ jobs:
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
 
+      - name: Upload .env to Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: env-file
+          path: .env
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -36,6 +42,12 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Download .env Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: env-file
+          path: .
+
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
@@ -45,6 +57,7 @@ jobs:
           # Build a docker container and
           # push it to ECR so that it can
           # be deployed to ECS...
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          BUILD_ARGS=$(awk -F= '{print "--build-arg " $1 "=" $2}' .env | xargs)
+          docker build $BUILD_ARGS -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"

@@ -1,3 +1,14 @@
+# Use an intermediate build stage to include the .env file
+FROM node:18-alpine as builder
+WORKDIR /usr/src/app
+COPY .env .
+
+# Final stage
+FROM node:18-alpine
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/.env .
+# Your application setup continues here...
+
 FROM node:18-alpine AS base
 
 # INSTALL DEPENDENCIES FOR DEVELOPMENT (FOR NEST)
