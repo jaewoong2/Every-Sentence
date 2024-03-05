@@ -7,7 +7,8 @@ import { User } from 'src/auth/entities/user.entity';
 import { MessageLog } from './entities/message-log.entity';
 import { Sentence } from './entities/sentence.entity';
 import OpenAI from 'openai';
-
+import { SlackService } from './slack.service';
+import axios from 'axios';
 type GetSentenceOption = {
   limit?: number;
 };
@@ -18,6 +19,8 @@ export class SentenceService {
   constructor(
     @Inject(authConfig.KEY)
     private config: ConfigType<typeof authConfig>,
+    @Inject(SlackService)
+    private slackService: SlackService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(MessageLog)
@@ -30,13 +33,45 @@ export class SentenceService {
 
   async sendAll() {}
 
-  async send(userId: User['id']) {
-    const setences = await this.getSentenceNotSended(userId, { limit: 5 });
+  async send(user: User) {
+    const setences = await this.getSentenceNotSended(user.id, { limit: 2 });
+
+    console.log('sentences -> ', setences);
+
+    const slackUserId = await this.slackService.getUserByEmail(user.email);
+
+    console.log('slackUserId -> ', slackUserId);
+
+    const sendSlackMessageResponse = await this.slackService.sendSlackMessage(
+      slackUserId.id,
+      this.formattingWord(setences),
+    );
+
+    console.log('sendSlackMessageResponse -> ', sendSlackMessageResponse);
 
     return {
-      message: `일본어 문장이 ${userId} 에게 전송 되었습니다.`,
+      message: `일본어 문장이 ${user.email} 에게 전송 되었습니다.`,
       data: setences,
     };
+  }
+
+  formattingWord(sentences: Sentence[]) {
+    return sentences
+      .map((sentence) => {
+        let result = '';
+
+        result += ':jp: 일본어 \n';
+        result += `*${sentence.sentence} (${sentence.ko_pronunciation} / ${sentence.jp_pronunciation})* \n`;
+        result += `:kr: 해석 \n`;
+        result += `*${sentence.translation}* \n`;
+        result += ':books: 예문 \n';
+        result += `*${sentence.example} (${sentence.example_ko_pronunciation} / ${sentence.example_jp_pronunciation})* \n`;
+        result += `:memo: 설명 \n`;
+        result += `*${sentence.explanation}* \n\n`;
+
+        return result;
+      })
+      .join('');
   }
 
   async getSentenceNotSended(userId: number, options?: GetSentenceOption) {
@@ -134,6 +169,52 @@ export class SentenceService {
         id: sentenceId,
       },
     });
+
+    return true;
+  }
+
+  async transferToRomaja(sentence: string[]) {
+    const result = await axios.post<{
+      romanizations: {
+        romanizedText: string;
+      }[];
+    }>(
+      `https://translation.googleapis.com/v3/projects/${this.config.auth.google.project_id}:romanizeText`,
+      {
+        source_language_code: 'ja',
+        contents: sentence,
+      },
+      {
+        headers: {
+          'x-goog-user-project': this.config.auth.google.project_id,
+          Authorization: `Bearer ${this.config.auth.google.access_token_auth}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      },
+    );
+
+    return result.data.romanizations.flat().map((roma) => roma.romanizedText);
+  }
+
+  async updateRoma(value: string, roma: string) {
+    const sentence = await this.sentenceRepository.findOne({
+      where: { sentence: value },
+    });
+
+    if (!sentence) {
+      const sentence = await this.sentenceRepository.findOne({
+        where: { example: value },
+      });
+
+      sentence.example_roma_pronunciation = roma;
+
+      await this.sentenceRepository.save(sentence);
+      return true;
+    }
+
+    sentence.roma_pronunciation = roma;
+
+    await this.sentenceRepository.save(sentence);
 
     return true;
   }

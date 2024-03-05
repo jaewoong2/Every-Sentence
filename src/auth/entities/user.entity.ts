@@ -26,6 +26,10 @@ export class User {
   @IsString()
   email: string;
 
+  @Column({ unique: true, nullable: true })
+  @IsString()
+  slackId: string;
+
   @Column({ nullable: true })
   @IsString()
   level: string; // 사용자 등급을 나타내는 필드

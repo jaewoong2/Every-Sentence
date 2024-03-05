@@ -10,12 +10,19 @@ import { EventBridgeService } from 'src/common/eventbridge.service';
 import { Setting } from 'src/auth/entities/setting.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
+import { SlackService } from './slack.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sentence, MessageLog, Category, User, Setting]),
   ],
-  providers: [SentenceService, EventBridgeService, AuthService, JwtService],
+  providers: [
+    SentenceService,
+    EventBridgeService,
+    AuthService,
+    JwtService,
+    SlackService,
+  ],
   controllers: [SentenceController],
 })
 export class SentenceModule {}

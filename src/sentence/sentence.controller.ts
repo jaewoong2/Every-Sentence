@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SentenceService } from './sentence.service';
-import { SendQueryDto } from './dtos/send.dto';
+import { SendBodyDto } from './dtos/send.dto';
 import { EventBridgeService } from 'src/common/eventbridge.service';
 import { JwtAuthGuard } from 'src/auth/guard/auth.guard';
 import { Request } from 'express';
@@ -21,7 +21,7 @@ export class SentenceController {
     private eventBridgeService: EventBridgeService,
   ) {}
 
-  @Post()
+  @Post('all')
   async sendAll() {
     return await this.sentenceService.sendAll();
   }
@@ -34,11 +34,38 @@ export class SentenceController {
     return await this.eventBridgeService.register(user.user);
   }
 
-  @Get()
-  async send(@Query() query: SendQueryDto) {
-    console.log(query);
-    return;
+  // Register 를 통해 들록된 Target API
+  @Post()
+  async send(@Body() { user }: SendBodyDto) {
+    return await this.sentenceService.send(user);
+  }
 
-    // return await this.sentenceService.send(query.id);
+  @Get('cw')
+  @UseGuards(JwtAuthGuard)
+  async cw(@Req() request: Request) {
+    const { user } = request;
+
+    const sentences = await this.sentenceService.getSentenceNotSended(
+      user.user.id,
+      { limit: 100000000 },
+    );
+
+    const newSentences = sentences.map(({ categoryId, sentence, example }) => {
+      if (categoryId === 2) {
+        return example;
+      }
+
+      return sentence;
+    });
+
+    const result = await this.sentenceService.transferToRomaja(newSentences);
+
+    result.forEach(async (roma, index) => {
+      const sentence = newSentences[index];
+      console.log(sentence, roma);
+      await this.sentenceService.updateRoma(sentence, roma);
+    });
+
+    return result;
   }
 }

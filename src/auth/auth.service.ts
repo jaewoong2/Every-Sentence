@@ -27,6 +27,17 @@ export class AuthService {
     this.client = new SESClient({ region: 'ap-northeast-2' });
   }
 
+  async getUser(userEmail: string) {
+    const user = await this.userRepository.findOne({
+      where: { email: userEmail },
+    });
+
+    return {
+      message: `${userEmail} 정보 조회 입니다`,
+      user,
+    };
+  }
+
   async getSetting(userId: number) {
     return this.settingRepository.findOne({ where: { user: { id: userId } } });
   }
@@ -53,7 +64,7 @@ export class AuthService {
       },
     );
 
-    return { message: 'Success' };
+    return { message: 'Success', data: user };
   }
 
   async loginByMagiclink(token: string) {
@@ -90,7 +101,8 @@ export class AuthService {
 
       return {
         redirectTo:
-          new URL(redirectTo).href + `?token=${savedUser.access_token}`,
+          new URL(redirectTo).href +
+          `?token=${savedUser.access_token}&join=${this.config.auth.slack.joinUrl}`,
         ...savedUser,
       };
     } catch (err) {

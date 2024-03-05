@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   Res,
   SetMetadata,
@@ -23,6 +24,12 @@ import { UpdateUserBodyDto } from './dtos/update-user.dto';
 @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Get('user')
+  @ApiResponse({ status: 200, description: 'Return users.' })
+  async getUser(@Query('email') email: string) {
+    return await this.authService.getUser(email);
+  }
 
   @Get()
   @UseGuards(JwtAuthGuard)

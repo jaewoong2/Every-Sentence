@@ -26,6 +26,9 @@ export class Sentence {
   jp_pronunciation: string;
 
   @Column({ nullable: true })
+  roma_pronunciation: string;
+
+  @Column({ nullable: true })
   example: string;
 
   @Column({ nullable: true })
@@ -33,6 +36,9 @@ export class Sentence {
 
   @Column({ nullable: true })
   example_jp_pronunciation: string;
+
+  @Column({ nullable: true })
+  example_roma_pronunciation: string;
 
   @Column({ nullable: true })
   explanation: string;

@@ -1,13 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsNumber } from 'class-validator';
+import { IsNotEmptyObject } from 'class-validator';
+import { User } from 'src/auth/entities/user.entity';
 
-export class SendQueryDto {
+export class SendBodyDto {
   @ApiProperty({
     example: '6',
     description: 'User Id',
   })
-  @IsNumber()
-  @Type(() => Number)
-  id: number;
+  @IsNotEmptyObject({ nullable: false })
+  user: User;
 }
