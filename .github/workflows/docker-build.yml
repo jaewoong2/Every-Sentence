@@ -9,7 +9,7 @@ env:
   AWS_REGION: ap-northeast-2 # set this to your preferred AWS region, e.g. us-west-1
   ECR_REPOSITORY: every-sentence # set this to your Amazon ECR repository name
   AWS_FUNCTION_NAME: every-sentence-lambda
-  AWS_API_GATEWAY_NAME: every-sentence-gw
+  AWS_API_GATEWAY_NAME: every_sentence_gw
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   AWS_LAMBDA_ROLE: ${{ secrets.AWS_LAMBDA_ROLE }}
 
