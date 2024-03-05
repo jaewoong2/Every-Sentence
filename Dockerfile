@@ -29,4 +29,4 @@ COPY --chown=node:node . .
 
 RUN npm run build
 
-CMD [ "node", "dist/main.js" ]
+CMD ["dist/lambda.handler"]
