@@ -1,0 +1,31 @@
+service: every-sentence
+
+plugins:
+  # - serverless-jetpack
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: ap-northeast-2
+  ecr:
+    images:
+      appimage:
+        path: ./
+      platform: linux/amd64
+  architecture: arm64
+
+functions:
+  api: 
+    image:
+      name: appimage
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    # handler: src/lambda.handler
+    events:
+      - http:
+          method: any
+          path: /{any+}
+    
+    architecture: arm64
