@@ -1,31 +1,27 @@
 service: every-sentence
 
-plugins:
-  # - serverless-jetpack
-  - serverless-offline
-
 provider:
   name: aws
-  runtime: nodejs18.x
+  runtime: nodejs14.x
   stage: dev
   region: ap-northeast-2
   ecr:
     images:
-      appimage:
+      everysentence:
         path: ./
-      platform: linux/amd64
-  architecture: arm64
 
 functions:
   api: 
     image:
-      name: appimage
+      name: everysentence
       entryPoint:
         - '/lambda-entrypoint.sh'
     # handler: src/lambda.handler
     events:
       - http:
-          method: any
-          path: /{any+}
+          path: /
+          method: ANY
+      - http:
+          path: /{proxy+}
+          method: ANY
     
-    architecture: arm64

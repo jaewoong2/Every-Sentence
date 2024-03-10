@@ -18,6 +18,9 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      matrix:
+        node-version: [18.x]
 
     steps:
       - name: Create .env file
@@ -33,7 +36,17 @@ jobs:
           path: .env
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless
+      - name: Serverless AWS authentication
+        run: sls config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -42,61 +55,5 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Download .env Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: env-file
-          path: .
-
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS...
-          BUILD_ARGS=$(awk -F= '{print "--build-arg " $1 "=" $2}' .env | xargs)
-          docker build $BUILD_ARGS -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-      - name: Deploy to Lambda
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          FUNCTION_EXISTS=$(aws lambda get-function --function-name $AWS_FUNCTION_NAME || echo "not exists")
-          if [[ $FUNCTION_EXISTS == "not exists" ]]; then
-            aws lambda create-function --function-name $AWS_FUNCTION_NAME \
-              --package-type Image \
-              --code ImageUri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-              --role arn:aws:iam::$AWS_ACCOUNT_ID:role/$AWS_LAMBDA_ROLE
-          else
-            aws lambda update-function-code --function-name $AWS_FUNCTION_NAME \
-              --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          fi
-
-      - name: Setup API Gateway
-        run: |
-          API_ID=$(aws apigateway get-rest-apis --query "items[?name=='$AWS_API_GATEWAY_NAME'].id" --output text)
-          if [ -z "$API_ID" ]; then
-            # Create the API Gateway if it doesn't exist
-            API_ID=$(aws apigateway create-rest-api --name $AWS_API_GATEWAY_NAME --description "API for Lambda" --query 'id' --output text)
-
-            PARENT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query 'items[?path==`/`].id' --output text)
-            RESOURCE_ID=$(aws apigateway create-resource --rest-api-id $API_ID --parent-id $PARENT_RESOURCE_ID --path-part "{proxy+}" --query 'id' --output text)
-
-            aws apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --authorization-type NONE --request-parameters method.request.path.proxy=true
-            aws apigateway put-integration --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method ANY --type AWS_PROXY --integration-http-method POST --uri arn:aws:apigateway:$AWS_REGION:lambda:path/2015-03-31/functions/arn:aws:lambda:$AWS_REGION:$AWS_ACCOUNT_ID:function:$AWS_FUNCTION_NAME/invocations
-
-            aws apigateway create-deployment --rest-api-id $API_ID --stage-name api
-            aws lambda add-permission --function-name $AWS_FUNCTION_NAME --statement-id apigateway-proxy --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:$AWS_REGION:$AWS_ACCOUNT_ID:$API_ID/*/*/{proxy+}"
-          else
-            echo "API Gateway named $AWS_API_GATEWAY_NAME already exists, skipping setup."
-          fi
+      - name: Deploy to AWS Lambda
+        run: npx serverless deploy --stage dev
