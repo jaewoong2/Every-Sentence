@@ -43,7 +43,7 @@ export class Sentence {
   @Column({ nullable: true })
   explanation: string;
 
-  @ManyToOne(() => Category, (category) => category.sentences, { eager: true })
+  @ManyToOne(() => Category, (category) => category.sentences, { lazy: true })
   category: Category;
 
   @CreateDateColumn()

@@ -16,12 +16,17 @@ export class Setting {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User, (user) => user.setting)
-  @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
+  @OneToOne(() => User, (user) => user.setting, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne(() => Category, (category) => category.setting, { nullable: true })
-  preferred_category: Category;
+  @ManyToOne(() => Category, (category) => category.setting, {
+    nullable: true,
+    lazy: true,
+  })
+  preferred_category: Promise<Category>;
 
   @Column({ nullable: true, default: '1100' })
   @IsString()

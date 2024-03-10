@@ -45,6 +45,9 @@ export class User {
   @OneToMany(() => MessageLog, (messageLog) => messageLog.user)
   messageLogs: MessageLog[];
 
-  @OneToOne(() => Setting, (setting) => setting.user)
-  setting: Setting;
+  @OneToOne(() => Setting, (setting) => setting.user, {
+    cascade: true,
+    lazy: true,
+  })
+  setting: Promise<Setting>;
 }

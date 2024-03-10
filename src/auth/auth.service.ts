@@ -156,7 +156,7 @@ export class AuthService {
 
       await this.client.send(command);
     } catch (err) {
-      console.error({ err });
+      return err;
     }
   }
 

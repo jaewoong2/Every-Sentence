@@ -10,6 +10,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { User } from 'src/auth/entities/user.entity';
 import { awsConfig } from 'src/config';
 import { getAfterMonthDate } from './util/date';
+import { useEventBridgeSchedulerSchedule } from './util/schedule';
 
 export type EventBridgePutRoleParams = {
   StartDate: string | Date;
@@ -38,6 +39,11 @@ export class EventBridgeService {
   }
 
   async register(user: User) {
+    const { getScheduleTemplate } = useEventBridgeSchedulerSchedule(
+      user.access_token,
+      user,
+    );
+
     const setting = await this.authService.getSetting(user.id);
     const [hour, min] = [
       setting.preferred_time.slice(0, 2),
@@ -51,9 +57,7 @@ export class EventBridgeService {
         Hour: hour,
         Minute: min,
       },
-      Input: {
-        user: user,
-      },
+      Input: { ...getScheduleTemplate(), user },
     });
   }
 
@@ -91,13 +95,11 @@ export class EventBridgeService {
         RoleArn: this.config.aws.eventBridge.target.roleArn,
         Input: JSON.stringify(Input),
       },
-
       StartDate: new Date(StartDate),
       EndDate: new Date(EndDate),
     });
 
     const response = await this.scheduler.send(command).catch((err) => {
-      // [TODO]: 409 Error thorw  Custom Exception 만들기
       return err.message;
     });
 

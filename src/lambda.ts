@@ -1,16 +1,40 @@
-import { bootstrap } from './main';
-import serverlessExpress from '@vendia/serverless-express';
-import { Callback, Context, Handler } from 'aws-lambda';
+import { NestFactory } from '@nestjs/core';
+import express from 'express';
+import * as serverlessExpress from '@codegenie/serverless-express';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import { INestApplication } from '@nestjs/common';
+import { AppModule } from './app.module';
 
-let server: Handler;
+let cachedServer: any;
 
-const handler = async (event: any, context: Context, callback: Callback) => {
-  const app = await bootstrap();
-  await app.init();
-  const expressApp = app.getHttpAdapter().getInstance();
+export const bootstrapLambda = async (
+  attachPipes: (app: INestApplication<any>) => void,
+) => {
+  if (!cachedServer) {
+    // create an express app
+    const expressApp = express();
 
-  server = server ?? serverlessExpress({ app: expressApp });
-  return server(event, context, callback);
+    // create an express adapter to work with nest applicaiton
+    const expressAdapter = new ExpressAdapter(expressApp);
+
+    // create a nest app using the express adapter
+    const nestApp = await NestFactory.create(AppModule, expressAdapter, {
+      logger: ['error', 'warn', 'log'],
+      bufferLogs: true,
+    });
+    nestApp.enableCors();
+
+    // configure nest application
+    attachPipes(nestApp);
+
+    // wait for the nest to initialise
+    await nestApp.init();
+
+    // create a serverless server using serverless express
+    cachedServer = serverlessExpress.configure({ app: expressApp });
+
+    return cachedServer;
+  }
+
+  return cachedServer;
 };
-
-export { handler };

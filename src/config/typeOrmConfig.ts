@@ -17,6 +17,7 @@ export class TypeOrmConfigService implements TypeOrmOptionsFactory {
       entities: ['dist/**/**/*.entity.{ts,js}'],
       schema: this.configService.get<string>('POSTGRES_SCHEMA') ?? null,
       synchronize: true,
+      logging: process.env.NODE_ENV === 'local' ? ['query', 'error'] : [],
     };
   }
 }

@@ -1,13 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ServiceExceptionToHttpExceptionFilter } from './common/exception-filter';
 import cookieParser from 'cookie-parser';
+import { bootstrapLambda } from './lambda';
+import { LoggerService } from './common/logger.service';
 
-export async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
+function attachPipes(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('Example API')
     .setDescription('The example API description')
@@ -16,6 +16,8 @@ export async function bootstrap() {
     .build();
 
   app.use(cookieParser());
+
+  app.useLogger(app.get(LoggerService));
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
@@ -35,13 +37,20 @@ export async function bootstrap() {
   });
 
   app.useGlobalFilters(new ServiceExceptionToHttpExceptionFilter());
+}
+if (process.env.NODE_ENV === 'local') {
+  async function bootstrap() {
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    attachPipes(app);
+    await app.listen(3000);
+  }
 
-  return app;
+  bootstrap();
 }
 
-async function run() {
-  const nestApp = await bootstrap();
-  await nestApp.listen(3000);
-}
+const handler = async (event: any, context: any, callback: any) => {
+  const server = await bootstrapLambda(attachPipes);
+  return server(event, context, callback);
+};
 
-run();
+module.exports.handler = handler;
