@@ -159,7 +159,7 @@
       "Type": "AWS::Lambda::Function",
       "Properties": {
         "Code": {
-          "ImageUri": "849441246713.dkr.ecr.ap-northeast-2.amazonaws.com/serverless-every-sentence-dev@sha256:a95ee3f56e947813a71b4fad78379e6e76c18329f1d6b734c62801f137006ca5"
+          "ImageUri": "849441246713.dkr.ecr.ap-northeast-2.amazonaws.com/serverless-every-sentence-dev@sha256:f27ec5ce95078291a88ba344e7d99c83696a823438bd8eb85ebd0ddbb47fe7f3"
         },
         "ImageConfig": {
           "EntryPoint": [
@@ -181,14 +181,14 @@
         "ApiLogGroup"
       ]
     },
-    "ApiLambdaVersions9Xj77fV8DFprkIoJ6ttBZj9h3HoUViquiTYO9xITU": {
+    "ApiLambdaVersion0je971k9QGYUCPZSKvaqUGQesT101KcyAKUC1k4FC8": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "a95ee3f56e947813a71b4fad78379e6e76c18329f1d6b734c62801f137006ca5"
+        "CodeSha256": "f27ec5ce95078291a88ba344e7d99c83696a823438bd8eb85ebd0ddbb47fe7f3"
       }
     },
     "ApiGatewayRestApi": {
@@ -313,7 +313,7 @@
         "ApiLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1709885586826": {
+    "ApiGatewayDeployment1710304914016": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -376,7 +376,7 @@
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersions9Xj77fV8DFprkIoJ6ttBZj9h3HoUViquiTYO9xITU"
+        "Ref": "ApiLambdaVersion0je971k9QGYUCPZSKvaqUGQesT101KcyAKUC1k4FC8"
       },
       "Export": {
         "Name": "sls-every-sentence-dev-ApiLambdaFunctionQualifiedArn"
