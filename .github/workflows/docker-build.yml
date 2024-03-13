@@ -55,5 +55,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
+      - name: Download .env Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: env-file
+          path: .
+
       - name: Deploy to AWS Lambda
         run: npx serverless deploy --stage dev
