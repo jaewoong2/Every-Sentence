@@ -6,6 +6,7 @@ import { authConfig } from 'src/config';
 import { User } from 'src/auth/entities/user.entity';
 import { WebClient } from '@slack/client';
 import { ResponseSlackApiUsersLookupByEmail } from 'src/common/types';
+import { EntityNotFoundException } from 'src/common/exception/service.exception';
 
 @Injectable()
 export class SlackService {
@@ -35,6 +36,10 @@ export class SlackService {
   async getUserByEmail(email: string) {
     const dbUser = await this.userRepository.findOne({ where: { email } });
 
+    if (!dbUser) {
+      throw EntityNotFoundException(`User: with email ${email} not found.`);
+    }
+
     if (dbUser.slackId) {
       return { id: dbUser.slackId };
     }
@@ -46,6 +51,10 @@ export class SlackService {
 
     const user = slackUser.user as ResponseSlackApiUsersLookupByEmail['user'];
 
+    if (!slackUser || !user) {
+      throw EntityNotFoundException(`SlackUser with email ${email} not found.`);
+    }
+
     await this.setSlackUserId(email, user.id);
 
     return user;
@@ -55,13 +64,13 @@ export class SlackService {
     const dbUser = await this.userRepository.findOne({ where: { email } });
 
     if (dbUser.slackId) {
-      return false;
+      return;
     }
 
     dbUser.slackId = slackId;
 
     await this.userRepository.save(dbUser);
 
-    return true;
+    return;
   }
 }

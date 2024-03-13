@@ -31,7 +31,7 @@ export class SentenceController {
 
   @Post()
   async send(@Body() { user }: SendBodyDto) {
-    return await this.sentenceService.send(user);
+    return await this.sentenceService.sendToUser(user);
   }
 
   // Health Check

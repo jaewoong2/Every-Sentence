@@ -9,6 +9,7 @@ import { JwtRefreshStrategy } from './strategy/refresh.strategy';
 import { User } from './entities/user.entity';
 import { AuthController } from './auth.controller';
 import { Setting } from './entities/setting.entity';
+import { UserRepository } from './repositories/user.repository';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { Setting } from './entities/setting.entity';
     }),
     ConfigModule,
   ],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, UserRepository],
   controllers: [AuthController],
 })
 export class AuthModule {}

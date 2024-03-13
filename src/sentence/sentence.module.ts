@@ -11,6 +11,7 @@ import { Setting } from 'src/auth/entities/setting.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { SlackService } from './slack.service';
+import { UserRepository } from 'src/auth/repositories/user.repository';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SlackService } from './slack.service';
     AuthService,
     JwtService,
     SlackService,
+    UserRepository,
   ],
   controllers: [SentenceController],
 })

@@ -9,12 +9,13 @@ import { Sentence } from 'src/sentence/entities/sentence.entity';
 import { MessageLog } from 'src/sentence/entities/message-log.entity';
 import { Category } from 'src/sentence/entities/category.entity';
 import { SlackService } from 'src/sentence/slack.service';
+import { UserRepository } from 'src/auth/repositories/user.repository';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sentence, MessageLog, Category, User, Setting]),
   ],
-  providers: [SentenceService, ManageService, SlackService],
+  providers: [SentenceService, ManageService, SlackService, UserRepository],
   controllers: [ManangeController],
 })
 export class ManageModule {}

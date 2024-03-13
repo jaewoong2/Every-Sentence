@@ -11,6 +11,7 @@ import { authConfig } from 'src/config';
 import { UpdateUserBodyDto } from './dtos/update-user.dto';
 import { Setting } from './entities/setting.entity';
 import { EntityNotFoundException } from 'src/common/exception/service.exception';
+import { UserRepository } from './repositories/user.repository';
 
 @Injectable()
 export class AuthService {
@@ -18,8 +19,8 @@ export class AuthService {
   constructor(
     @Inject(authConfig.KEY)
     private config: ConfigType<typeof authConfig>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserRepository)
+    private readonly userRepository: UserRepository,
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
     private readonly jwtService: JwtService, // auth.module의 JwtModule로부터 공급 받음
@@ -28,8 +29,8 @@ export class AuthService {
   }
 
   async getUser(userEmail: string) {
-    const user = await this.userRepository.findOne({
-      where: { email: userEmail },
+    const user = await this.userRepository.findOneBy({
+      email: userEmail,
     });
 
     return {
@@ -38,8 +39,9 @@ export class AuthService {
     };
   }
 
-  async getSetting(userId: number) {
-    return this.settingRepository.findOne({ where: { user: { id: userId } } });
+  async getUserSetting(userId: number) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    return user.setting;
   }
 
   async updateUser({
@@ -49,20 +51,15 @@ export class AuthService {
     phone_number,
     settings,
   }: UpdateUserBodyDto) {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOneBy({ email });
 
-    await this.userRepository.update(
-      { email },
-      { email, name, level, phone_number },
-    );
-
-    await this.settingRepository.update(
-      { user: { id: user.id } },
-      {
-        preferred_time: settings.preferred_time,
-        preferred_category: settings.preferred_category,
-      },
-    );
+    await this.userRepository.updateUser({
+      email,
+      name,
+      level,
+      phone_number,
+      setting: settings,
+    });
 
     return { message: 'Success', data: user };
   }
@@ -79,7 +76,7 @@ export class AuthService {
 
       const { email, redirectTo } = decodedToken;
 
-      const user = await this.userRepository.findOne({ where: { email } });
+      const user = await this.userRepository.findOneBy({ email });
 
       const refreshToken = this.jwtService.sign(
         { email },
@@ -92,18 +89,17 @@ export class AuthService {
         throw new UnauthorizedException('만료된 토큰 입니다.');
       }
 
-      const savedUser = await this.userRepository.save({
-        id: user?.id ?? null,
-        email: email,
-        access_token: this.jwtService.sign({ email, id: user.id }),
-        refresh_token: refreshToken,
-      });
+      user.email = email;
+      user.access_token = this.jwtService.sign({ email, id: user.id });
+      user.refresh_token = refreshToken;
+
+      await this.userRepository.save(user);
 
       return {
         redirectTo:
           new URL(redirectTo).href +
-          `?token=${savedUser.access_token}&join=${this.config.auth.slack.joinUrl}`,
-        ...savedUser,
+          `?token=${user.access_token}&join=${this.config.auth.slack.joinUrl}`,
+        ...user,
       };
     } catch (err) {
       throw new UnauthorizedException(err.message);
@@ -165,10 +161,9 @@ export class AuthService {
       throw EntityNotFoundException('User Email : 정의되지 않았습니다.');
     }
 
-    const setting = await this.settingRepository.findOne({
-      where: { user: { email: user.email } },
-      select: { id: true },
-    });
+    const findUser = await this.userRepository.findOneBy({ email: user.email });
+
+    const setting = findUser.setting;
 
     if (!setting) {
       const $user = await this.userRepository.findOne({

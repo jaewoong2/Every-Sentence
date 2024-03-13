@@ -44,7 +44,8 @@ export class EventBridgeService {
       user,
     );
 
-    const setting = await this.authService.getSetting(user.id);
+    const setting = await this.authService.getUserSetting(user.id);
+
     const [hour, min] = [
       setting.preferred_time.slice(0, 2),
       setting.preferred_time.slice(2),

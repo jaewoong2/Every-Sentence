@@ -1,14 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigType } from '@nestjs/config';
-import { authConfig } from 'src/config';
 import { User } from 'src/auth/entities/user.entity';
 import { MessageLog } from './entities/message-log.entity';
 import { Sentence } from './entities/sentence.entity';
-import OpenAI from 'openai';
 import { SlackService } from './slack.service';
 import { getKorDate } from 'src/common/util/date';
+import { UserRepository } from 'src/auth/repositories/user.repository';
 
 type GetSentenceOption = {
   limit?: number;
@@ -16,40 +14,41 @@ type GetSentenceOption = {
 
 @Injectable()
 export class SentenceService {
-  openai: OpenAI;
   constructor(
-    @Inject(authConfig.KEY)
-    private config: ConfigType<typeof authConfig>,
-    @Inject(SlackService)
     private slackService: SlackService,
     @InjectRepository(MessageLog)
     private readonly logRepository: Repository<MessageLog>,
     @InjectRepository(Sentence)
     private readonly sentenceRepository: Repository<Sentence>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {
-    this.openai = new OpenAI({ apiKey: this.config.auth.openAiAPIKey });
-  }
+    @InjectRepository(UserRepository)
+    private readonly userRepository: UserRepository,
+  ) {}
 
-  async send(user: User) {
-    const setences = await this.getSentenceNotSended(user, { limit: 3 });
+  async sendToUser(user: User) {
+    const userId = await this.getUserId(user);
+    const sentences = await this.getSentenceNotSended(user, { limit: 3 });
 
     const slackUserId = await this.slackService.getUserByEmail(user.email);
 
     await this.slackService.sendSlackMessage(
       slackUserId.id,
-      this.formattingWord(setences),
+      this.formattingWord(sentences),
     );
 
-    setences.forEach(async ({ id }) => {
-      await this.saveLog(id, user.id);
-    });
+    await this.saveLogs(sentences, userId);
 
     return {
       message: `일본어 문장이 ${user.email} 에게 전송 되었습니다.`,
-      data: setences,
+      data: sentences,
     };
+  }
+
+  private async getUserId(user: User) {
+    if (user.id) return user.id;
+
+    const findUser = await this.userRepository.findOneBy({ email: user.email });
+
+    return findUser.id;
   }
 
   formattingWord(sentences: Sentence[]) {
@@ -87,20 +86,13 @@ export class SentenceService {
       .getRawMany();
 
     const ids = sentSentenceIds.map((log) => log.sentenceId);
-
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['setting'],
-      select: ['setting'],
-    });
-
-    const userPrefrredCategory = await (await user.setting).preferred_category;
+    const userPreferences = await this.getUserPreferences(userId);
 
     const newSentences = await this.sentenceRepository
       .createQueryBuilder('sentence')
       .where(ids.length > 0 ? 'sentence.id NOT IN (:...ids)' : '1=1', { ids })
       .andWhere('sentence.categoryId = :userCategoryId', {
-        userCategoryId: userPrefrredCategory.id,
+        userCategoryId: userPreferences.setting.preferred_category.id,
       })
       .select('*')
       .limit(options?.limit)
@@ -109,14 +101,29 @@ export class SentenceService {
     return newSentences;
   }
 
-  async saveLog(sentenceId: number, userId: number) {
-    await this.logRepository.insert({
-      user: { id: userId },
-      sentence: {
-        id: sentenceId,
-      },
+  private async getUserPreferences(userId: number) {
+    const user = await this.userRepository.findOneOrFail({
+      where: { id: userId },
+      relations: ['setting'],
     });
 
-    return true;
+    const userSetting = await user.setting;
+    const preferred_category = await userSetting.preferred_category;
+
+    return {
+      ...user,
+      setting: {
+        ...userSetting,
+        preferred_category,
+      },
+    };
+  }
+
+  private async saveLogs(sentences: Sentence[], userId: number): Promise<void> {
+    const logs = sentences.map((sentence) => ({
+      user: { id: userId },
+      sentence: { id: sentence.id },
+    }));
+    await this.logRepository.insert(logs);
   }
 }

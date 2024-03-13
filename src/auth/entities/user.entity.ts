@@ -47,7 +47,6 @@ export class User {
 
   @OneToOne(() => Setting, (setting) => setting.user, {
     cascade: true,
-    lazy: true,
   })
-  setting: Promise<Setting>;
+  setting: Setting;
 }
