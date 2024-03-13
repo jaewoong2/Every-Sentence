@@ -18,10 +18,8 @@ export const bootstrapLambda = async (
     const expressAdapter = new ExpressAdapter(expressApp);
 
     // create a nest app using the express adapter
-    const nestApp = await NestFactory.create(AppModule, expressAdapter, {
-      logger: ['error', 'warn', 'log'],
-      bufferLogs: true,
-    });
+    const nestApp = await NestFactory.create(AppModule, expressAdapter, {});
+
     nestApp.enableCors();
 
     // configure nest application
@@ -31,7 +29,9 @@ export const bootstrapLambda = async (
     await nestApp.init();
 
     // create a serverless server using serverless express
-    cachedServer = serverlessExpress.configure({ app: expressApp });
+    cachedServer = serverlessExpress.configure({
+      app: expressApp,
+    });
 
     return cachedServer;
   }

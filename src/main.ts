@@ -6,6 +6,10 @@ import { ServiceExceptionToHttpExceptionFilter } from './common/exception-filter
 import cookieParser from 'cookie-parser';
 import { bootstrapLambda } from './lambda';
 import { LoggerService } from './common/logger.service';
+import { ReplaySubject, firstValueFrom } from 'rxjs';
+import { Handler } from 'aws-lambda';
+
+const serverSubject = new ReplaySubject<Handler>();
 
 function attachPipes(app: INestApplication) {
   const config = new DocumentBuilder()
@@ -48,8 +52,10 @@ if (process.env.NODE_ENV === 'local') {
   bootstrap();
 }
 
+bootstrapLambda(attachPipes).then((server) => serverSubject.next(server));
+
 const handler = async (event: any, context: any, callback: any) => {
-  const server = await bootstrapLambda(attachPipes);
+  const server = await firstValueFrom(serverSubject);
   return server(event, context, callback);
 };
 
