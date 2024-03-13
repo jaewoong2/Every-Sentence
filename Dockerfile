@@ -5,11 +5,11 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
+RUN ls -all
 
 # 최종 스테이지
 FROM amazon/aws-lambda-nodejs
 # 빌드 스테이지에서 생성된 빌드 아티팩트와 .env 파일 복사
-RUN ls -all
 COPY --from=builder /app/dist /var/task/dist
 COPY --from=builder /app/node_modules /var/task/node_modules
 COPY --from=builder /app/.env /var/task/.env
