@@ -25,6 +25,13 @@ import { UpdateUserBodyDto } from './dtos/update-user.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Get('login-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiResponse({ status: 200, description: 'Return users.' })
+  async getLoginUser(@Req() { user }: { user: UserToken }) {
+    return await this.authService.getUser(user.email);
+  }
+
   @Get('user')
   @ApiResponse({ status: 200, description: 'Return users.' })
   async getUser(@Query('email') email: string) {
@@ -46,9 +53,19 @@ export class AuthController {
     return this.authService.updateUser(body);
   }
 
+  @Get('regist-link')
+  @UseGuards(JwtAuthGuard)
+  async getRegistLink() {
+    return {
+      data: {
+        link: 'https://join.slack.com/t/everysentence/shared_invite/zt-2drr45ugn-QBlL2i_Er5qq8QU3P6zx4w',
+      },
+    };
+  }
+
   @Post('login-email')
-  async sendEmail(@Body() { redirectTo, email }: LoginEmailDto) {
-    this.authService.sendMagicLink({ redirectTo, email });
+  async RegistsendEmail(@Body() { redirectTo, email, name }: LoginEmailDto) {
+    this.authService.sendMagicLink({ redirectTo, email, name });
     return 'Mail Send';
   }
 

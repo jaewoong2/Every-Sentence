@@ -29,13 +29,14 @@ export class AuthService {
   }
 
   async getUser(userEmail: string) {
-    const user = await this.userRepository.findOneBy({
-      email: userEmail,
-    });
+    const user = await this.userRepository
+      .createQueryBuilder('User')
+      .where('User.email = :email', { email: userEmail })
+      .getOneOrFail();
 
     return {
       message: `${userEmail} 정보 조회 입니다`,
-      user,
+      data: user,
     };
   }
 
@@ -96,9 +97,7 @@ export class AuthService {
       await this.userRepository.save(user);
 
       return {
-        redirectTo:
-          new URL(redirectTo).href +
-          `?token=${user.access_token}&join=${this.config.auth.slack.joinUrl}`,
+        redirectTo: new URL(redirectTo).href + `?token=${user.access_token}`,
         ...user,
       };
     } catch (err) {
@@ -106,8 +105,12 @@ export class AuthService {
     }
   }
 
-  async sendMagicLink({ email, redirectTo }: LoginEmailDto): Promise<void> {
-    const payload = { email, redirectTo };
+  async sendMagicLink({
+    email,
+    redirectTo,
+    name,
+  }: LoginEmailDto): Promise<void> {
+    const payload = { email, redirectTo, name };
     const token = this.jwtService.sign(payload);
     const link = `${this.config.auth.redirect}/${token}`;
 
