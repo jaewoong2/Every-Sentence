@@ -10,6 +10,7 @@ import { User } from './entities/user.entity';
 import { AuthController } from './auth.controller';
 import { Setting } from './entities/setting.entity';
 import { UserRepository } from './repositories/user.repository';
+import { LoggerService } from 'src/common/logger.service';
 
 @Module({
   imports: [
@@ -30,7 +31,13 @@ import { UserRepository } from './repositories/user.repository';
     }),
     ConfigModule,
   ],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, UserRepository],
+  providers: [
+    LoggerService,
+    AuthService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    UserRepository,
+  ],
   controllers: [AuthController],
 })
 export class AuthModule {}

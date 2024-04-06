@@ -12,6 +12,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { SlackService } from './slack.service';
 import { UserRepository } from 'src/auth/repositories/user.repository';
+import { LoggerService } from 'src/common/logger.service';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UserRepository } from 'src/auth/repositories/user.repository';
     JwtService,
     SlackService,
     UserRepository,
+    LoggerService,
   ],
   controllers: [SentenceController],
 })
