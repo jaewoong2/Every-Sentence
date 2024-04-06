@@ -148,8 +148,8 @@ export class AuthService {
         .execute();
 
       await this.createUserSetting({ email: email });
-
-      await this.client.send(command);
+      const res = await this.client.send(command);
+      console.log(res);
     } catch (err) {
       console.error(err);
       return err;
