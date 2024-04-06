@@ -29,14 +29,14 @@ jobs:
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
 
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Upload .env to Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: env-file
           path: .env
-
-      - name: Checkout
-        uses: actions/checkout@v3
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -60,6 +60,11 @@ jobs:
         with:
           name: env-file
           path: .
+
+      - name: Delete Artifact
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: env-file
 
       - name: Deploy to AWS Lambda
         run: npx serverless deploy --stage dev

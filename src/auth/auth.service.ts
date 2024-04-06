@@ -116,25 +116,21 @@ export class AuthService {
 
     const command = new SendEmailCommand({
       Destination: {
-        //목적지
-        CcAddresses: [],
         ToAddresses: [email], // 받을 사람의 이메일
       },
       Message: {
         Body: {
-          // 이메일 본문 내용
           Text: {
             Charset: 'UTF-8',
             Data: `메일이 보내지는지 테스트중입니다.${link}`,
           },
         },
         Subject: {
-          // 이메일 제목
           Charset: 'UTF-8',
           Data: '이메일 테스트',
         },
       },
-      Source: 'no-reply@prlc.kr', // 보내는 사람의 이메일 - 무조건 Verfied된 identity여야 함
+      Source: 'no-reply@prlc.kr',
       ReplyToAddresses: [],
     });
 
@@ -155,6 +151,7 @@ export class AuthService {
 
       await this.client.send(command);
     } catch (err) {
+      console.error(err);
       return err;
     }
   }
