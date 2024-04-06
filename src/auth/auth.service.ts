@@ -12,6 +12,7 @@ import { UpdateUserBodyDto } from './dtos/update-user.dto';
 import { Setting } from './entities/setting.entity';
 import { EntityNotFoundException } from 'src/common/exception/service.exception';
 import { UserRepository } from './repositories/user.repository';
+import { LoggerService } from 'src/common/logger.service';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
     private readonly jwtService: JwtService, // auth.module의 JwtModule로부터 공급 받음
+    private readonly logService: LoggerService,
   ) {
     this.client = new SESClient({ region: 'ap-northeast-2' });
   }
@@ -149,9 +151,10 @@ export class AuthService {
 
       await this.createUserSetting({ email: email });
       const res = await this.client.send(command);
-      console.log(res);
+      this.logService.log(res);
     } catch (err) {
-      console.error(err);
+      this.logService.log(err);
+      this.logService.error(err);
       return err;
     }
   }
