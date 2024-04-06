@@ -23,14 +23,14 @@ jobs:
         node-version: [18.x]
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Create .env file
         run: |
           jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' <<< "$SECRETS_CONTEXT" > .env
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
-
-      - name: Checkout
-        uses: actions/checkout@v3
 
       - name: Upload .env to Artifacts
         uses: actions/upload-artifact@v2
