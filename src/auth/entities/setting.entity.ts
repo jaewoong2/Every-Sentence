@@ -5,6 +5,8 @@ import {
   OneToOne,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Category } from 'src/sentence/entities/category.entity';
@@ -34,4 +36,12 @@ export class Setting {
 
   @Column('date', { nullable: true, default: getAfterMonthDate(1) })
   end_time: Date;
+
+  @CreateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
+
+  @UpdateDateColumn()
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  updated_at: Date;
 }

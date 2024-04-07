@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { UserToken } from './strategy/auth.strategy';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LoginEmailDto } from './dtos/login-email.dto';
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { User } from './entities/user.entity';
 import { ConfigType } from '@nestjs/config';
 import { authConfig } from 'src/config';
@@ -13,10 +12,12 @@ import { Setting } from './entities/setting.entity';
 import { EntityNotFoundException } from 'src/common/exception/service.exception';
 import { UserRepository } from './repositories/user.repository';
 import { LoggerService } from 'src/common/logger.service';
+import aws from 'aws-sdk';
+import { MAIL_DESCRIPTION } from 'src/common/util/mail';
 
 @Injectable()
 export class AuthService {
-  client: SESClient;
+  client: aws.SES;
   constructor(
     @Inject(authConfig.KEY)
     private config: ConfigType<typeof authConfig>,
@@ -27,7 +28,7 @@ export class AuthService {
     private readonly jwtService: JwtService, // auth.module의 JwtModule로부터 공급 받음
     private readonly logService: LoggerService,
   ) {
-    this.client = new SESClient({ region: 'ap-northeast-2' });
+    this.client = new aws.SES({ region: 'ap-northeast-2' });
   }
 
   async getUser(userEmail: string) {
@@ -115,16 +116,15 @@ export class AuthService {
     const payload = { email, redirectTo, name };
     const token = this.jwtService.sign(payload);
     const link = `${this.config.auth.redirect}/${token}`;
-
-    const command = new SendEmailCommand({
+    const command = {
       Destination: {
         ToAddresses: [email], // 받을 사람의 이메일
       },
       Message: {
         Body: {
-          Text: {
+          Html: {
             Charset: 'UTF-8',
-            Data: `메일이 보내지는지 테스트중입니다.${link}`,
+            Data: `${MAIL_DESCRIPTION(link)}`,
           },
         },
         Subject: {
@@ -134,7 +134,7 @@ export class AuthService {
       },
       Source: 'no-reply@prlc.kr',
       ReplyToAddresses: [],
-    });
+    };
 
     try {
       await this.userRepository
@@ -150,7 +150,7 @@ export class AuthService {
         .execute();
 
       await this.createUserSetting({ email: email });
-      const res = await this.client.send(command);
+      const res = await this.client.sendEmail(command).promise();
       this.logService.log(res);
     } catch (err) {
       this.logService.log(err);
